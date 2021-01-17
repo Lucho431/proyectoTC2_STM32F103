@@ -40,6 +40,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MUESTRAS 156
+#define UMBRAL_L 8076964
+#define UMBRAL_H 16273156
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -72,6 +74,10 @@ uint32_t arm1[MUESTRAS],
 uint8_t i=0;
 
 uint8_t muxABC = 0;
+uint8_t last_mux_ABC = 0;
+
+uint8_t rango = 0;
+uint8_t reles[] = {0b001, 0b101, 0b111, 0b000, 0b100, 0b110};
 
 char texto[25];
 /* USER CODE END PV */
@@ -79,6 +85,22 @@ char texto[25];
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+void checkRango (void){
+	uint32_t max = 0;
+	for (uint8_t j = 0; j < MUESTRAS; j++){
+		if (arm1[j] > max)
+			max = arm1[j];
+	}
+
+	if (max > UMBRAL_H && rango < 5){
+		rango++;
+		GPIOA->BSRR = (uint32_t)(reles[rango-1] << 26u) + (uint32_t)(reles[rango] << 10u);
+	}else if (max < UMBRAL_L && rango > 0){
+		rango--;
+		GPIOA->BSRR = (uint32_t)(reles[rango+1] << 26u) + (uint32_t)(reles[rango] << 10u);
+	}
+}
 
 void RMS (void){
 
@@ -104,6 +126,13 @@ void RMS (void){
 	rms7/=MUESTRAS;
 	rms11/=MUESTRAS;
 	rms13/=MUESTRAS;
+
+	rms1=sqrt(rms1);
+	rms3=sqrt(rms3);
+	rms5=sqrt(rms5);
+	rms7=sqrt(rms7);
+	rms11=sqrt(rms11);
+	rms13=sqrt(rms13);
 
 }
 
@@ -157,13 +186,16 @@ int main(void)
   while (1)
   {
 	  if (flag_adcStart){
-		  GPIOB->ODR = (uint32_t)muxABC;
+		  GPIOB->BSRR = (uint32_t)(last_mux_ABC << 28u) + (uint32_t)(muxABC << 12u);
+		  //HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState) //se conserva unicamente para hallar la definicion de la funcion
 		  HAL_ADC_Start_IT(&hadc1);
+//		  HAL_ADC_Start(&hadc1);
+//		  flag_adcDone = 1;
 		  flag_adcStart = 0;
 	  }//end if flag_adcStart
 
 	  if (flag_adcDone){
-
+		  last_mux_ABC = muxABC;
 		  switch (muxABC){
 		  	  case 0:
 		  		  arm1[i] = HAL_ADC_GetValue(&hadc1);
@@ -196,7 +228,8 @@ int main(void)
 		  		  arm13[i] = pow(arm13[i],2);
 
 		  		  i++;
-		  		  if (i > 199){
+		  		  if (i > MUESTRAS-1){
+		  			  checkRango();
 		  			  RMS();
 		  			  flag_print = 1;
 		  			  i = 0;
@@ -209,31 +242,22 @@ int main(void)
 	  }//end if flag_adcDone
 
 	  if (flag_print){
-/*
-		  SSD1306_Fill(0);
-		  SSD1306_GotoXY(0, 18);
-		  sprintf (texto, "%d %d", (int)rms1, (int)rms3);
-		  SSD1306_Puts(texto, &Font_7x10, 1);
-		  SSD1306_GotoXY(0, 30);
-		  sprintf (texto, "%d %d", (int)rms5, (int)rms7);
-		  SSD1306_Puts(texto, &Font_7x10, 1);
-		  SSD1306_GotoXY(0, 42);
-		  sprintf (texto, "%d %d", (int)rms11, (int)rms13);
-		  SSD1306_Puts(texto, &Font_7x10, 1);
-		  SSD1306_UpdateScreen();
-*/
+
 		  SSD1306_Fill(0);
 		  SSD1306_GotoXY(0, 0);
 		  sprintf (texto, "Armonicos:");
 		  SSD1306_Puts(texto, &Font_7x10, 1);
 		  SSD1306_GotoXY(0, 11);
-		  sprintf (texto, "Comp 3ro: %d Comp 5to: %d", (int)(rms3*100/rms1), (int)(rms5*100/rms1));
+		  sprintf (texto, "nivel 1ro: %d", (int)(rms1));
 		  SSD1306_Puts(texto, &Font_7x10, 1);
 		  SSD1306_GotoXY(0, 22);
-		  sprintf (texto, "Comp 7mo: %d Comp 11vo: %d", (int)(rms7*100/rms1), (int)(rms11*100/rms1));
+		  sprintf (texto, "3ro: %d 5to: %d", (int)(rms3*100/rms1), (int)(rms5*100/rms1));
 		  SSD1306_Puts(texto, &Font_7x10, 1);
 		  SSD1306_GotoXY(0, 33);
-		  sprintf (texto, "Comp 13vo: %d", (int)(rms13*100/rms1));
+		  sprintf (texto, "7mo: %d 11vo: %d", (int)(rms7*100/rms1), (int)(rms11*100/rms1));
+		  SSD1306_Puts(texto, &Font_7x10, 1);
+		  SSD1306_GotoXY(0, 44);
+		  sprintf (texto, "13vo: %d", (int)(rms13*100/rms1));
 		  SSD1306_Puts(texto, &Font_7x10, 1);
 		  SSD1306_UpdateScreen();
 

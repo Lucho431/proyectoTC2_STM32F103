@@ -58,12 +58,20 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define mux_A_Pin GPIO_PIN_0
+#define mux_A_Pin GPIO_PIN_12
 #define mux_A_GPIO_Port GPIOB
-#define mux_B_Pin GPIO_PIN_1
+#define mux_B_Pin GPIO_PIN_13
 #define mux_B_GPIO_Port GPIOB
-#define mux_C_Pin GPIO_PIN_2
+#define mux_C_Pin GPIO_PIN_14
 #define mux_C_GPIO_Port GPIOB
+#define mux_D_Pin GPIO_PIN_15
+#define mux_D_GPIO_Port GPIOB
+#define K1_Pin GPIO_PIN_10
+#define K1_GPIO_Port GPIOA
+#define K2_Pin GPIO_PIN_11
+#define K2_GPIO_Port GPIOA
+#define K3_Pin GPIO_PIN_12
+#define K3_GPIO_Port GPIOA
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
